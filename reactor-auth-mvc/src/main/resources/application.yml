@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: reactor-auth-mvc
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/security_db?serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET:your-256-bit-secret-key-for-jwt-encoding-and-decoding}
+      expiration: 86400000
+    url-auth:
+      enabled: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 123456
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+server:
+  port: 9998
+
+logging:
+  level:
+    com.reactorAuth: DEBUG
