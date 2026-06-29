@@ -7,7 +7,13 @@ import { loadDynamicRoutes } from './dynamicRoutes'
 const staticRoutes = [
   {
     path: '/',
-    redirect: '/home'
+    redirect: '/index'
+  },
+  {
+    path: '/index',
+    name: 'index',
+    component: () => import('@/views/welcome/index.vue'),
+    meta: { requiresAuth: false, title: '欢迎页', sortOrder: 0, hidden: true }
   },
   {
     path: '/login',

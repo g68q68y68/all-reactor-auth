@@ -2,7 +2,6 @@ package com.reactorAuth.config;
 
 import com.reactorAuth.security.JwtAuthenticationFilter;
 import com.reactorAuth.security.UrlAuthorizationFilter;
-import com.reactorAuth.security.SecurityContextRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +15,8 @@ import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.context.ServerSecurityContextRepository;
+import org.springframework.security.web.server.context.WebSessionServerSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
@@ -29,7 +30,7 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final SecurityContextRepository securityContextRepository;
+//    private final SecurityContextRepository securityContextRepository;
     private final ReactiveUserDetailsService userDetailsService;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -45,7 +46,8 @@ public class SecurityConfig {
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
                 .requestCache(ServerHttpSecurity.RequestCacheSpec::disable)
                 .authenticationManager(reactiveAuthenticationManager())
-                .securityContextRepository(securityContextRepository)
+//                .securityContextRepository(securityContextRepository)
+                .securityContextRepository(new WebSessionServerSecurityContextRepository())
                 .authorizeExchange(exchanges -> exchanges.anyExchange().permitAll())
                 .addFilterAfter(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION);
 
@@ -55,6 +57,11 @@ public class SecurityConfig {
         }
 
         return chain.build();
+    }
+
+    @Bean
+    public ServerSecurityContextRepository serverSecurityContextRepository() {
+        return new WebSessionServerSecurityContextRepository();
     }
 
     @Bean

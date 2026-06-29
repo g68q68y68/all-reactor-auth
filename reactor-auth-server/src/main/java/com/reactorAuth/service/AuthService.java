@@ -16,12 +16,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,8 +40,10 @@ public class AuthService {
     private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
 
+
+
     @Transactional
-    public Mono<LoginResponse> login(LoginRequest loginRequest) {
+    public Mono<LoginResponse> login(LoginRequest loginRequest, ServerWebExchange exchange) {
         log.info("用户登录: {}", loginRequest.getUsername());
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -49,94 +54,78 @@ public class AuthService {
         return authenticationManager.authenticate(authentication)
                 .flatMap(authResult -> {
                     CustomUserDetails userDetails = (CustomUserDetails) authResult.getPrincipal();
+                    Long userId = userDetails.getUserId();
 
-                    // 更新最后登录时间
-                    return userRepository.updateLastLoginTime(userDetails.getUserId())
-                            .then(Mono.zip(
-                                    tokenProvider.generateToken(authResult),
-                                    tokenProvider.generateRefreshToken(authResult)
-                            ))
-                            .flatMap(tokens -> {
-                                String accessToken = tokens.getT1();
-                                String refreshToken = tokens.getT2();
+                    // 【关键】手动保存到 Session
+                    return exchange.getSession()
+                            .doOnNext(session -> log.info("1. 获取到 Session: {}", session.getId()))
+                            .flatMap(session -> {
+                                SecurityContext securityContext = new SecurityContextImpl(authResult);
 
-                                return buildLoginResponse(userDetails, accessToken, refreshToken);
-                            });
-                })
-                .doOnError(error -> log.error("登录失败: {}", error.getMessage()));
-    }
+                                // 存入 Session
+                                session.getAttributes().put("SPRING_SECURITY_CONTEXT", securityContext);
+                                log.info("2. 存入 SecurityContext 到 Session");
+                                log.info("3. Session 属性: {}", session.getAttributes().keySet());
 
-    @Transactional
-    public Mono<LoginResponse> register(RegisterRequest registerRequest) {
-        log.info("用户注册: {}", registerRequest.getUsername());
-
-        // 检查用户名是否存在
-        return userRepository.existsByUsername(registerRequest.getUsername())
-                .flatMap(exists -> {
-                    if (exists) {
-                        return Mono.error(new BusinessException(ResultCode.USERNAME_EXISTS));
-                    }
-                    return userRepository.existsByEmail(registerRequest.getEmail());
-                })
-                .flatMap(exists -> {
-                    if (exists) {
-                        return Mono.error(new BusinessException(ResultCode.EMAIL_EXISTS));
-                    }
-
-                    // 创建新用户
-                    User user = User.builder()
-                            .username(registerRequest.getUsername())
-                            .password(passwordEncoder.encode(registerRequest.getPassword()))
-                            .email(registerRequest.getEmail())
-                            .phone(registerRequest.getPhone())
-                            .fullName(registerRequest.getFullName())
-                            .status(1)
-                            .isAccountNonExpired(true)
-                            .isAccountNonLocked(true)
-                            .isCredentialsNonExpired(true)
-                            .isEnabled(true)
-                            .build();
-
-                    return userRepository.save(user)
-                            .flatMap(savedUser -> {
-                                // 分配默认角色（普通用户）
-                                return roleRepository.findByCode("ROLE_USER")
-                                        .collectList()
-                                        .flatMap(roles -> {
-                                            if (!roles.isEmpty()) {
-                                                // 这里需要插入user_roles关联表
-                                                // 为了简化，此处省略关联表插入
-                                            }
-                                            return Mono.just(savedUser);
-                                        });
+                                // 【必须】调用 save()
+                                return session.save()
+                                        .doOnSuccess(v -> log.info("4. ✅ Session 保存成功: {}", session.getId()))
+                                        .doOnError(e -> log.error("5. ❌ Session 保存失败: {}", e.getMessage()));
                             })
-                            .flatMap(savedUser -> {
-                                // 自动登录
-                                Authentication authentication = new UsernamePasswordAuthenticationToken(
-                                        savedUser.getUsername(),
-                                        registerRequest.getPassword()
-                                );
-
-                                return authenticationManager.authenticate(authentication)
-                                        .flatMap(authResult -> {
-                                            CustomUserDetails userDetails =
-                                                    (CustomUserDetails) authResult.getPrincipal();
-
+                            .then(Mono.defer(() -> {
+                                log.info("6. 开始更新登录时间");
+                                return userRepository.updateLastLoginTime(userId)
+                                        .doOnSuccess(v -> log.info("7. ✅ 更新登录时间成功"))
+                                        .doOnError(e -> log.error("8. ❌ 更新登录时间失败: {}", e.getMessage()))
+                                        .then(Mono.defer(() -> {
+                                            log.info("9. 开始生成 Token");
                                             return Mono.zip(
                                                     tokenProvider.generateToken(authResult),
                                                     tokenProvider.generateRefreshToken(authResult)
-                                            ).flatMap(tokens -> {
-                                                String accessToken = tokens.getT1();
-                                                String refreshToken = tokens.getT2();
+                                            );
+                                        }));
+                            }))
+                            .flatMap(tokens -> {
+                                log.info("10. Token 生成成功");
+                                return buildLoginResponse(
+                                        userDetails,
+                                        tokens.getT1(),
+                                        tokens.getT2()
+                                );
+                            })
+                            // 设置当前请求的上下文
+                            .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authResult));
+                })
+                .doOnSuccess(response -> log.info("✅ 登录成功: {}", loginRequest.getUsername()))
+                .doOnError(error -> log.error("❌ 登录失败: {}", error.getMessage()));
+    }
 
-                                                return buildLoginResponse(
-                                                        userDetails,
-                                                        accessToken,
-                                                        refreshToken
-                                                );
-                                            });
-                                        });
-                            });
+    @Transactional
+    public Mono<LoginResponse> register(RegisterRequest req) {
+        return userRepository.existsByUsername(req.getUsername())
+                .flatMap(exists -> {
+                    if (exists) return Mono.error(new BusinessException(ResultCode.USERNAME_EXISTS));
+                    return userRepository.existsByEmail(req.getEmail());
+                })
+                .flatMap(emailExists -> {
+                    if (emailExists) return Mono.error(new BusinessException(ResultCode.EMAIL_EXISTS));
+                    User user = User.builder()
+                            .username(req.getUsername())
+                            .password(passwordEncoder.encode(req.getPassword()))
+                            .email(req.getEmail())
+                            .phone(req.getPhone())
+                            .fullName(req.getFullName())
+                            .status(1).isEnabled(true)
+                            .isAccountNonExpired(true).isAccountNonLocked(true).isCredentialsNonExpired(true)
+                            .build();
+                    return userRepository.save(user);
+                })
+                .flatMap(user -> {
+                    Authentication auth = new UsernamePasswordAuthenticationToken(user.getUsername(), req.getPassword());
+                    return authenticationManager.authenticate(auth)
+                            .flatMap(authResult -> tokenProvider.generateToken(authResult)
+                                    .flatMap(token -> buildLoginResponse(
+                                            (CustomUserDetails) authResult.getPrincipal(), token, "")));
                 });
     }
 

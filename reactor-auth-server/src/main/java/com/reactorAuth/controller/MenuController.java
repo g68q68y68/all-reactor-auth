@@ -5,8 +5,10 @@ import com.reactorAuth.dto.Result;
 import com.reactorAuth.dto.ResultCode;
 import com.reactorAuth.entity.Menu;
 import com.reactorAuth.service.MenuService;
+import com.reactorAuth.utils.LoginUserUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,9 +20,14 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/menus")
+@Slf4j
 public class MenuController extends BaseController<Menu, MenuService> {
 
     private final MenuService menuService;
+
+
+    @Autowired
+    private LoginUserUtil loginUserUtil;
 
     public MenuController(MenuService menuService) {
         super(menuService);
@@ -33,16 +40,16 @@ public class MenuController extends BaseController<Menu, MenuService> {
      */
     @GetMapping("/tree")
     public Mono<Result<List<MenuTreeNode>>> tree() {
-        return ReactiveSecurityContextHolder.getContext()
-                .map(ctx -> ctx.getAuthentication())
-                .flatMap(auth -> {
-                    Long userId = Long.valueOf(auth.getPrincipal().toString());
-                    Set<String> roles = auth.getAuthorities().stream()
+        return loginUserUtil.getUserDetails()
+                .flatMap(userDetails -> {
+                    Long userId = userDetails.getUserId();
+                    Set<String> roles = userDetails.getAuthorities().stream()
                             .map(GrantedAuthority::getAuthority)
                             .collect(Collectors.toSet());
                     return menuService.buildTreeForUser(userId, roles);
                 })
                 .map(Result::success)
-                .switchIfEmpty(Mono.just(Result.error(ResultCode.UNAUTHORIZED, "未登录")));
+                .switchIfEmpty(Mono.just(Result.error(ResultCode.UNAUTHORIZED, "未登录")))
+                .doOnError(e -> log.error("获取菜单树失败: {}", e.getMessage()));
     }
 }

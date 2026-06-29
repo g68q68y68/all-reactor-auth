@@ -17,7 +17,8 @@ function handleTokenExpired(message) {
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 30000,
-  headers: { 'Content-Type': 'application/json' }
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,  // ← 必须设置！
 })
 
 // 请求拦截器 — 注入 Bearer token

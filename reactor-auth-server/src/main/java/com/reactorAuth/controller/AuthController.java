@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -22,9 +23,9 @@ public class AuthController {
 
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
-    public Mono<Result<LoginResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public Mono<Result<LoginResponse>> login(@Valid @RequestBody LoginRequest loginRequest, ServerWebExchange exchange) {
         log.info("登录请求: {}", loginRequest.getUsername());
-        return authService.login(loginRequest)
+        return authService.login(loginRequest,exchange)
                 .map(Result::success);
     }
 
