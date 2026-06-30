@@ -21,7 +21,6 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -42,7 +41,6 @@ public class AuthService {
 
 
 
-    @Transactional
     public Mono<LoginResponse> login(LoginRequest loginRequest, ServerWebExchange exchange) {
         log.info("用户登录: {}", loginRequest.getUsername());
 
@@ -100,7 +98,6 @@ public class AuthService {
                 .doOnError(error -> log.error("❌ 登录失败: {}", error.getMessage()));
     }
 
-    @Transactional
     public Mono<LoginResponse> register(RegisterRequest req) {
         return userRepository.existsByUsername(req.getUsername())
                 .flatMap(exists -> {

@@ -11,20 +11,20 @@ import reactor.core.publisher.Mono;
 public interface RoleRepository extends R2dbcRepository<Role, Long>, PageableRepository<Role> {
 
     @Query("""
-        SELECT r.* FROM roles r
-        INNER JOIN user_roles ur ON ur.role_id = r.id
+        SELECT r.* FROM sys_roles r
+        INNER JOIN sys_user_roles ur ON ur.role_id = r.id
         WHERE ur.user_id = :userId
     """)
     Flux<Role> findRolesByUserId(Long userId);
 
-    @Query("SELECT r.* FROM roles r WHERE r.code = :code")
+    @Query("SELECT r.* FROM sys_roles r WHERE r.code = :code")
     Flux<Role> findByCode(String code);
 
     // ========== 分页查询 ==========
 
-    @Query("SELECT COUNT(*) FROM roles")
+    @Query("SELECT COUNT(*) FROM sys_roles")
     Mono<Long> count();
 
-    @Query("SELECT * FROM roles ORDER BY id DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT * FROM sys_roles ORDER BY id DESC LIMIT :limit OFFSET :offset")
     Flux<Role> findPage(int limit, long offset);
 }

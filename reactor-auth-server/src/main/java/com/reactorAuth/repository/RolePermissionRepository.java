@@ -11,10 +11,10 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface RolePermissionRepository extends R2dbcRepository<RolePermission, Long> {
 
-    @Query("SELECT * FROM role_permissions WHERE role_id = :roleId")
+    @Query("SELECT * FROM sys_role_permissions WHERE role_id = :roleId")
     Flux<RolePermission> findByRoleId(Long roleId);
 
     @Modifying
-    @Query("DELETE FROM role_permissions WHERE role_id = :roleId")
+    @Query("DELETE FROM sys_role_permissions WHERE role_id = :roleId")
     Mono<Void> deleteByRoleId(Long roleId);
 }

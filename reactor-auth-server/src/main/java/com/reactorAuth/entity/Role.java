@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("roles")
+@Table("sys_roles")
 public class Role {
     @Id
     private Long id;

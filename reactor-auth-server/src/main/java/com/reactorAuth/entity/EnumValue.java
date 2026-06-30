@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("enum_values")
+@Table("sys_enum_values")
 public class EnumValue {
     @Id
     private Long id;

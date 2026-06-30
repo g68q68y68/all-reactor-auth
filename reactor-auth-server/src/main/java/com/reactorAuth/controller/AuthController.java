@@ -1,5 +1,6 @@
 package com.reactorAuth.controller;
 
+import com.reactorAuth.annotation.AuditLog;
 import com.reactorAuth.dto.LoginRequest;
 import com.reactorAuth.dto.LoginResponse;
 import com.reactorAuth.dto.RegisterRequest;
@@ -21,6 +22,7 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @AuditLog(module = "认证", action = "登录")
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
     public Mono<Result<LoginResponse>> login(@Valid @RequestBody LoginRequest loginRequest, ServerWebExchange exchange) {
@@ -29,6 +31,7 @@ public class AuthController {
                 .map(Result::success);
     }
 
+    @AuditLog(module = "认证", action = "注册")
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<Result<LoginResponse>> register(@Valid @RequestBody RegisterRequest registerRequest) {
@@ -46,7 +49,7 @@ public class AuthController {
         return authService.refreshToken(refreshToken)
                 .map(Result::success);
     }
-
+    @AuditLog(module = "认证", action = "退出")
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.OK)
     public Mono<Result<Void>> logout() {

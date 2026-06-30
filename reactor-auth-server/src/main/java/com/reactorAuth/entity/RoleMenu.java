@@ -12,7 +12,7 @@ import org.springframework.data.relational.core.mapping.Column;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("role_menus")
+@Table("sys_role_menus")
 public class RoleMenu {
     @Id
     private Long id;

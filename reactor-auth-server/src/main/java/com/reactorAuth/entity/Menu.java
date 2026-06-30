@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("menus")
+@Table("sys_menus")
 public class Menu {
     @Id
     private Long id;

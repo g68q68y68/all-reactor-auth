@@ -10,14 +10,14 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface EnumValueRepository extends R2dbcRepository<EnumValue, Long>, PageableRepository<EnumValue> {
 
-    @Query("SELECT * FROM enum_values WHERE type_id = :typeId ORDER BY sort_order ASC")
+    @Query("SELECT * FROM sys_enum_values WHERE type_id = :typeId ORDER BY sort_order ASC")
     Flux<EnumValue> findByTypeId(Long typeId);
 
     // ========== 分页查询 ==========
 
-    @Query("SELECT COUNT(*) FROM enum_values")
+    @Query("SELECT COUNT(*) FROM sys_enum_values")
     Mono<Long> count();
 
-    @Query("SELECT * FROM enum_values ORDER BY type_id ASC, sort_order ASC LIMIT :limit OFFSET :offset")
+    @Query("SELECT * FROM sys_enum_values ORDER BY type_id ASC, sort_order ASC LIMIT :limit OFFSET :offset")
     Flux<EnumValue> findPage(int limit, long offset);
 }

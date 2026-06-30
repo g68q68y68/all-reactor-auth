@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("permissions")
+@Table("sys_permissions")
 public class Permission {
     @Id
     private Long id;

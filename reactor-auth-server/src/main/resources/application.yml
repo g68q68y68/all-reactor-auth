@@ -15,15 +15,54 @@ spring:
   security:
     jwt:
       secret: ${JWT_SECRET:your-256-bit-secret-key-for-jwt-encoding-and-decoding}
-      expiration: 86400000 # 24小时
-      refresh-expiration: 604800000 # 7天
+      expiration: 86400000
+      refresh-expiration: 604800000
     url-auth:
-      enabled: false  # 开启后才需要引入 Redis
-  # 未开启时需排除 Redis 自动配置，否则启动报错（取消下面注释）：
+      enabled: false
+
+  # ==============================================================
+  # Quartz JDBC 数据源（与 R2DBC 共用 security_db，但连接方式不同）
+  # R2DBC → 响应式，业务 CRUD；JDBC → 阻塞式，Quartz 调度状态
+  # HikariCP 连接池只需 5 个连接，Quartz 自身有线程池处理任务
+  # ==============================================================
+  datasource:
+    quartz:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/security_db?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: root
+      password: 123456
+      hikari:
+        maximum-pool-size: 5
+
+  # ==============================================================
+  # 排除自动配置：Redis（未开启 URL 鉴权时不需要连）
+  # QuartzAutoConfiguration（手动配 SchedulerFactoryBean，双数据源）
+  # ==============================================================
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+      - org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration
+
+  # ==============================================================
+  # Quartz 持久化配置（JDBC JobStore，调度状态存 QRTZ_* 表）
+  # initialize-schema: never → 手动执行 quartz_schema.sql 建表
+  # isClustered: false → 单机模式；集群部署时改为 true
+  # threadCount: 5 → Quartz 自己的工作线程，足够日常定时任务
+  # ==============================================================
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    properties:
+      org.quartz.scheduler.instanceName: MyScheduler
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+      org.quartz.jobStore.tablePrefix: QRTZ_
+      org.quartz.jobStore.isClustered: false
+      org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
+      org.quartz.threadPool.threadCount: 5
 
   data:
     redis:
@@ -38,6 +77,7 @@ spring:
           min-idle: 0
 
 logging:
+  config: classpath:logback-spring.xml
   level:
     org.springframework.security: DEBUG
     org.springframework.data.r2dbc: DEBUG

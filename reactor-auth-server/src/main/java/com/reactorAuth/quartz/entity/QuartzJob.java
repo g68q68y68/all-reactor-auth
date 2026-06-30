@@ -1,16 +1,14 @@
-package com.reactorAuth.entity;
+package com.reactorAuth.quartz.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.relational.core.mapping.Table;
 import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDateTime;
 
@@ -18,22 +16,31 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("sys_enum_types")
-public class EnumType {
+@Table("sys_quartz_jobs")
+public class QuartzJob {
     @Id
     private Long id;
 
-    @Column("code")
-    private String code;
+    @Column("job_name")
+    private String jobName;
 
-    @Column("name")
-    private String name;
+    @Column("job_group")
+    private String jobGroup;
+
+    @Column("cron_expression")
+    private String cronExpression;
+
+    @Column("job_class")
+    private String jobClass;
 
     @Column("description")
     private String description;
 
+    @Column("params")
+    private String params;  // JSON
+
     @Column("status")
-    private Integer status;
+    private Integer status;  // 1=运行中 0=暂停
 
     @Column("created_at")
     @CreatedDate
@@ -42,11 +49,4 @@ public class EnumType {
     @Column("updated_at")
     @LastModifiedDate
     private LocalDateTime updatedAt;
-
-    @Column("created_by")
-    @CreatedBy
-    private Long createdBy;
-
-    @Column("updated_by")
-    @LastModifiedBy
-    private Long updatedBy;}
+}

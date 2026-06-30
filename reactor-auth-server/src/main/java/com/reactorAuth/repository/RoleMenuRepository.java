@@ -11,14 +11,14 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface RoleMenuRepository extends R2dbcRepository<RoleMenu, Long> {
 
-    @Query("SELECT menu_id FROM role_menus WHERE role_id = :roleId")
+    @Query("SELECT menu_id FROM sys_role_menus WHERE role_id = :roleId")
     Flux<Long> findMenuIdsByRoleId(Long roleId);
 
     @Modifying
-    @Query("DELETE FROM role_menus WHERE role_id = :roleId")
+    @Query("DELETE FROM sys_role_menus WHERE role_id = :roleId")
     Mono<Void> deleteByRoleId(Long roleId);
 
     @Modifying
-    @Query("DELETE FROM role_menus WHERE menu_id = :menuId")
+    @Query("DELETE FROM sys_role_menus WHERE menu_id = :menuId")
     Mono<Void> deleteByMenuId(Long menuId);
 }

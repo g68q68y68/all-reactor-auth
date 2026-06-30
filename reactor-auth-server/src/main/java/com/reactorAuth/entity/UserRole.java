@@ -12,7 +12,7 @@ import org.springframework.data.relational.core.mapping.Column;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table("user_roles")
+@Table("sys_user_roles")
 public class UserRole {
     @Id
     private Long id;
